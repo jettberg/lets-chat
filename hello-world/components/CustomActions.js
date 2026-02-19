@@ -13,7 +13,7 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, sendMessage, stora
     const generateReference = (uri) => {
         const timeStamp = new Date().getTime();
         const imageName = uri.split("/")[uri.split("/").length - 1];
-        return `${userId}-${timeStamp}-${imageName}`;
+        return `images/${userId}-${timeStamp}-${imageName}`;
     };
 
     const uploadAndSendImage = async (imageURI) => {
@@ -28,8 +28,12 @@ const CustomActions = ({ wrapperStyle, iconTextStyle, onSend, sendMessage, stora
             const imageURL = await getDownloadURL(snapshot.ref);
 
 
-            onSend([{ image: imageURL }]);
-            // onSend([{ location: { latitude, longitude } }]);
+            onSend([{
+                _id: `temp-img-${Date.now()}`,
+                createdAt: new Date(),
+                user: { _id: userId },
+                image: imageURL,
+            }]);
         } catch (error) {
             console.log("Upload error:", error.message);
             Alert.alert("Unable to send image. Please try again.");

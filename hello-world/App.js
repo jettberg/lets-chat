@@ -33,7 +33,7 @@ const App = () => {
   // Initialize Cloud Firestore and get a reference to the service
   const db = getFirestore(app);
 
-  const storage = getStorage(app);
+const storage = getStorage(app, "gs://lets-chat-c0638.firebasestorage.app");
 
   try {
     initializeAuth(app, {
