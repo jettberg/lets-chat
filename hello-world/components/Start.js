@@ -6,6 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 
 const COLORS = ["#090C08", "#474056", "#8A95A5", "#B9C6AE"];
@@ -14,6 +16,7 @@ export default function Start({ navigation }) {
   const [name, setName] = useState("");
   const [backgroundColor, setBackgroundColor] = useState(COLORS[0]);
 
+  // Navigate to Chat and pass name + background color
   const handleEnterChat = () => {
     navigation.navigate("Chat", { name, backgroundColor });
   };
@@ -24,40 +27,46 @@ export default function Start({ navigation }) {
       resizeMode="cover"
       style={styles.imageBackground}
     >
-      <View style={styles.container}>
-        <Text style={styles.appTitle}>Let&apos;s Chat</Text>
+      {/* Prevent keyboard from hiding the input field on Start screen */}
+      <KeyboardAvoidingView
+        style={styles.imageBackground}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.container}>
+          <Text style={styles.appTitle}>Let&apos;s Chat</Text>
 
-        <View style={styles.card}>
-          <TextInput
-            style={styles.textInput}
-            value={name}
-            onChangeText={setName}
-            placeholder="Your Name"
-            placeholderTextColor="#666"
-          />
+          <View style={styles.card}>
+            <TextInput
+              style={styles.textInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Your Name"
+              placeholderTextColor="#666"
+            />
 
-          <Text style={styles.chooseColorText}>Choose Background Color:</Text>
+            <Text style={styles.chooseColorText}>Choose Background Color:</Text>
 
-          <View style={styles.colorRow}>
-            {COLORS.map((color) => (
-              <TouchableOpacity
-                key={color}
-                accessibilityLabel={`Choose color ${color}`}
-                onPress={() => setBackgroundColor(color)}
-                style={[
-                  styles.colorCircle,
-                  { backgroundColor: color },
-                  backgroundColor === color ? styles.selectedCircle : null,
-                ]}
-              />
-            ))}
+            <View style={styles.colorRow}>
+              {COLORS.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  accessibilityLabel={`Choose color ${color}`}
+                  onPress={() => setBackgroundColor(color)}
+                  style={[
+                    styles.colorCircle,
+                    { backgroundColor: color },
+                    backgroundColor === color ? styles.selectedCircle : null,
+                  ]}
+                />
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.button} onPress={handleEnterChat}>
+              <Text style={styles.buttonText}>Start Chatting</Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.button} onPress={handleEnterChat}>
-            <Text style={styles.buttonText}>Start Chatting</Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
@@ -109,7 +118,7 @@ const styles = StyleSheet.create({
   colorCircle: {
     width: 50,
     height: 50,
-    borderRadius: 25, // half of 50 = circle
+    borderRadius: 25,
     borderWidth: 2,
     borderColor: "transparent",
   },
