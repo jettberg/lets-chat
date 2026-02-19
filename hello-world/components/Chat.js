@@ -1,68 +1,81 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
 import { GiftedChat } from "react-native-gifted-chat";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp
+} from "firebase/firestore";
 
-export default function Chat({ route, navigation }) {
+export default function Chat({ route, navigation, db }) {
   // Read params passed from Start screen
-  const { name = "Chat", backgroundColor = "#fff" } = route.params || {};
+  const { userId, name = "Anonymous", backgroundColor = "#fff" } = route.params || {};
 
   // GiftedChat reads messages from this state
   const [messages, setMessages] = useState([]);
 
+  const insets = useSafeAreaInsets();
+
   useEffect(() => {
-    // Set the header title to the user's name
-    navigation.setOptions({ title: name });
+    navigation.setOptions({ title: name || "Chat" });
 
-    // Add at least two static messages on load:
-    // 1) A "system" message (we use a special user object to represent system)
-    // 2) A user message
-    setMessages([
-      {
-        _id: "sys-1",
-        text: "✅ You’ve entered the chat.",
-        createdAt: new Date(),
-        user: {
-          _id: "system",
-          name: "System",
-        },
-      },
-      {
-        _id: "user-1",
-        text: `Hey ${name || "there"}! Welcome 👋`,
-        createdAt: new Date(),
-        user: {
-          _id: "bot",
-          name: "Chat Bot",
-        },
-      },
-    ]);
-  }, [navigation, name]);
+    // Real-time listener for messages, newest first
+    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
 
-  // Called whenever the user sends a new message
-  const onSend = useCallback((newMessages = []) => {
-    setMessages((previousMessages) =>
-      GiftedChat.append(previousMessages, newMessages)
-    );
-  }, []);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newMessages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+
+        return {
+          _id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toMillis
+            ? new Date(data.createdAt.toMillis())
+            : new Date(),
+        };
+      });
+
+      setMessages(newMessages);
+    });
+
+    // Clean up the listener when leaving the screen
+    return () => unsubscribe();
+  }, [db, navigation, name]);
+
+  // Save sent messages to Firestore
+  const onSend = (newMessages = []) => {
+    addDoc(collection(db, "messages"), newMessages[0]);
+  };
 
   return (
-    // KeyboardAvoidingView prevents the keyboard from covering the input toolbar
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // adjust if needed
-    >
-      <GiftedChat
-        messages={messages}
-        onSend={(newMessages) => onSend(newMessages)}
-        // This identifies messages sent by the current user
-        user={{ _id: 1, name }}
-      />
-    </KeyboardAvoidingView>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // This is what your peer does: use safe-area inset instead of a hard-coded 100
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+      >
+        <GiftedChat
+          messages={messages}
+          onSend={(newMessages) => onSend(newMessages)}
+          user={{ _id: String(userId || "unknown-user"), name: name || "Anonymous" }}
+          alwaysShowSend
+          // This is a common “can’t tap input” fix:
+          listViewProps={{ keyboardShouldPersistTaps: "handled" }}
+        />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },

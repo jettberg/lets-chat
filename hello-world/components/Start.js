@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { signInAnonymously, getAuth } from "firebase/auth";
 
 const COLORS = ["#090C08", "#474056", "#8A95A5", "#B9C6AE"];
 
@@ -16,9 +17,23 @@ export default function Start({ navigation }) {
   const [name, setName] = useState("");
   const [backgroundColor, setBackgroundColor] = useState(COLORS[0]);
 
-  // Navigate to Chat and pass name + background color
-  const handleEnterChat = () => {
-    navigation.navigate("Chat", { name, backgroundColor });
+  // Signs user in anonymously, then navigates to Chat with required params
+  const handleStartChatting = () => {
+    const auth = getAuth();
+
+    signInAnonymously(auth)
+      .then((result) => {
+        const userId = result.user.uid;
+
+        navigation.navigate("Chat", {
+          userId,
+          name: name.trim() || "Anonymous",
+          backgroundColor,
+        });
+      })
+      .catch((error) => {
+        console.log("Anonymous sign-in error:", error);
+      });
   };
 
   return (
@@ -61,7 +76,7 @@ export default function Start({ navigation }) {
               ))}
             </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleEnterChat}>
+            <TouchableOpacity style={styles.button} onPress={handleStartChatting}>
               <Text style={styles.buttonText}>Start Chatting</Text>
             </TouchableOpacity>
           </View>
