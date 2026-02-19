@@ -5,10 +5,11 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, addDoc, onSnapshot, query, orderBy } from "firebase/firestore";
 
+import MapView from "react-native-maps";
+import CustomActions from "./CustomActions";
 
 
-
-export default function Chat({ route, navigation, db, isConnected }) {
+export default function Chat({ route, navigation, db, isConnected, storage }) {
   // Read params passed from Start screen
   const { userId, name = "Anonymous", backgroundColor = "#fff" } = route.params || {};
   // GiftedChat reads messages from this state
@@ -67,14 +68,57 @@ export default function Chat({ route, navigation, db, isConnected }) {
     };
   }, [db, navigation, name, isConnected]);
 
-  const onSend = (newMessages = []) => {
-    if (isConnected !== true) return;
-    addDoc(collection(db, "messages"), newMessages[0]);
-  };
+const onSend = async (newMessages = []) => {
+  if (isConnected !== true) return;
+  // GiftedChat sends an array; some custom calls might pass a single object
+  const message = Array.isArray(newMessages) ? newMessages[0] : newMessages;
+  if (!message || typeof message !== "object") return;
+  await addDoc(collection(db, "messages"), message);
+};
 
   // Hide the input when offline so users can’t send messages
   const renderInputToolbar = (props) => {
     if (isConnected === true) return <InputToolbar {...props} />;
+    return null;
+  };
+
+  const renderCustomActions = (props) => {
+    // When offline, don’t render actions (prevents picking images/location while offline)
+    if (isConnected !== true) return null;
+
+    return (
+      <CustomActions
+        {...props}
+        storage={storage}
+        onSend={onSend}
+        userId={String(userId || "unknown-user")}
+        isConnected={isConnected}
+      />
+    );
+  };
+
+  const renderCustomView = (props) => {
+    const { currentMessage } = props;
+    // render map bubble when message has location
+    if (currentMessage?.location) {
+      return (
+        <MapView
+          style={{
+            width: 150,
+            height: 100,
+            borderRadius: 13,
+            margin: 3,
+          }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
+      );
+    }
+
     return null;
   };
 
@@ -92,6 +136,8 @@ export default function Chat({ route, navigation, db, isConnected }) {
           user={{ _id: String(userId || "unknown-user"), name: name || "Anonymous" }}
           alwaysShowSend
           renderInputToolbar={renderInputToolbar}
+          renderActions={renderCustomActions}
+          renderCustomView={renderCustomView}
           listViewProps={{ keyboardShouldPersistTaps: "handled" }}
         />
       </KeyboardAvoidingView>

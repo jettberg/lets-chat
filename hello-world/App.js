@@ -11,6 +11,9 @@ import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { Alert } from "react-native";
+import { getStorage } from "firebase/storage";
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
+
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +32,8 @@ const App = () => {
 
   // Initialize Cloud Firestore and get a reference to the service
   const db = getFirestore(app);
+
+  const storage = getStorage(app);
 
   try {
     initializeAuth(app, {
@@ -53,20 +58,23 @@ const App = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="Start">
-          <Stack.Screen name="Start" component={Start} options={{ title: "Start" }} />
-          <Stack.Screen name="Chat">
-{(props) => (
-  <Chat
-    db={db}
-    isConnected={connectionStatus.isConnected}
-    {...props}
-  />
-)}
-          </Stack.Screen>
-        </Stack.Navigator>
-      </NavigationContainer>
+      <ActionSheetProvider>
+        <NavigationContainer>
+          <Stack.Navigator initialRouteName="Start">
+            <Stack.Screen name="Start" component={Start} options={{ title: "Start" }} />
+            <Stack.Screen name="Chat">
+              {(props) => (
+                <Chat
+                  db={db}
+                  storage={storage}
+                  isConnected={connectionStatus.isConnected}
+                  {...props}
+                />
+              )}
+            </Stack.Screen>
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ActionSheetProvider>
     </GestureHandlerRootView>
   );
 };
